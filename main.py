@@ -19,7 +19,7 @@ def main() -> None:
     luna.tasks.extend(
         [
             Task("Breakfast", time(7, 0), "daily"),
-            Task("Give medication", time(9, 0), "daily"),
+            Task("Give medication", time(8, 0), "daily"),
         ]
     )
     max_pet.tasks.extend(
@@ -32,11 +32,18 @@ def main() -> None:
 
     scheduler = Scheduler()
     todays_tasks = scheduler.organize_tasks(owner)
+    conflict_warnings = scheduler.detect_conflicts(owner)
     pet_names_by_task = {
         id(task): pet.name for pet in owner.pets for task in pet.tasks
     }
 
     print("Today's schedule")
+    if conflict_warnings:
+        for warning in conflict_warnings:
+            print(f"WARNING: {warning}")
+    else:
+        print("No scheduling conflicts found.")
+
     for task in todays_tasks:
         time_label = (
             task.scheduled_time.strftime("%I:%M %p").lstrip("0")

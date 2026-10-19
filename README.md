@@ -14,7 +14,7 @@ Your job is to design the system first (UML), then implement the logic in Python
 
 ## Implementation summary
 
-The core classes are in `pawpal_system.py`. `Task` stores an activity's description, scheduled time, frequency, and completion status. `PetInfo` stores a pet's details and tasks. `OwnerInfo` manages multiple pets and `get_all_tasks()` combines their tasks. `Scheduler` retrieves tasks through the owner, orders them by scheduled time (unscheduled tasks go last), and can mark a task in its schedule as complete. `main.py` demonstrates a daily schedule for three pets, and `tests/test_pawpal.py` checks task completion and task addition.
+The core classes are in `pawpal_system.py`. `Task` stores an activity's description, scheduled time, frequency, category, completion status, and scheduled date. `PetInfo` stores a pet's details and tasks. `OwnerInfo` manages multiple pets and `get_all_tasks()` combines their tasks. `Scheduler` retrieves tasks through the owner, orders the selected day's tasks by scheduled time (unscheduled tasks go last), prioritizes medication and meals when tasks share a time, detects same-time task conflicts as warning messages, and can mark a task in its schedule as complete. Completing a daily or weekly task creates the next dated occurrence for that pet; other task frequencies do not recur automatically. The Streamlit app supports filtering a generated schedule by pet and completion status and displays conflict warnings. `main.py` demonstrates a daily schedule for three pets, including a same-time conflict warning; `tests/test_pawpal.py` checks task completion, task addition, schedule ordering, recurring occurrences, and conflict detection.
 
 ## What you will build
 
@@ -85,14 +85,12 @@ Sample test output:
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
-
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Scheduler.organize_tasks()` | Includes tasks scheduled for the selected date, ordered chronologically. Medication and meal tasks come before walks and other categories when their scheduled times match. Tasks without a time appear last. |
+| Filtering | Streamlit schedule filters in `app.py` | Users can filter the generated schedule by pet and completion status (all, complete, or not complete). The scheduler itself selects tasks by date; it does not currently filter by available time or skip tasks. |
+| Conflict handling | `Scheduler.detect_conflicts()` | Checks tasks for the selected date and returns warning messages for each pair with the same scheduled time, whether they belong to one pet or multiple pets. Unscheduled tasks are ignored. Warnings are displayed without stopping schedule generation. |
+| Recurring tasks | `Task.next_occurrence()`; `Scheduler.mark_completed()` | Completing a daily task creates an incomplete task for the following day; completing a weekly task creates one seven days later. The next occurrence retains the task details and recurrence identifier and is added to the same pet. Other frequencies do not recur automatically. |
 
 ## 📸 Demo Walkthrough
 
