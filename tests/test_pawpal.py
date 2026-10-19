@@ -48,6 +48,36 @@ def test_scheduler_places_unscheduled_tasks_last() -> None:
     assert schedule == [timed_task, unscheduled_task]
 
 
+def test_scheduler_sorts_across_pets_and_excludes_other_dates() -> None:
+    selected_date = date(2026, 10, 18)
+    earlier = Task(
+        "Breakfast", time(7, 0), "daily", scheduled_date=selected_date
+    )
+    later = Task(
+        "Walk", time(8, 0), "daily", scheduled_date=selected_date
+    )
+    previous_day = Task(
+        "Old task",
+        time(6, 0),
+        "daily",
+        scheduled_date=selected_date - timedelta(days=1),
+    )
+    mochi = PetInfo(
+        name="Mochi", animal="dog", breed="Shiba Inu", age=4,
+        tasks=[later, previous_day],
+    )
+    luna = PetInfo(
+        name="Luna", animal="cat", breed="Tabby", age=6, tasks=[earlier]
+    )
+    owner = OwnerInfo(
+        name="Jordan", contact="jordan@example.com", pets=[mochi, luna]
+    )
+
+    schedule = Scheduler().organize_tasks(owner, for_date=selected_date)
+
+    assert schedule == [earlier, later]
+
+
 def test_completing_daily_task_adds_next_day_occurrence() -> None:
     today = date(2026, 10, 18)
     task = Task("Medicine", time(8, 0), "daily", category="medication")
@@ -87,6 +117,27 @@ def test_completing_weekly_task_adds_occurrence_seven_days_later() -> None:
     assert pet.tasks[1].scheduled_date == today + timedelta(days=7)
 
 
+def test_weekly_recurrence_copies_task_details_across_year_boundary() -> None:
+    completion_date = date(2026, 12, 29)
+    task = Task(
+        "Give medication",
+        time(21, 15),
+        "weekly",
+        category="medication",
+        scheduled_date=completion_date,
+    )
+    next_task = task.next_occurrence(completion_date)
+
+    assert next_task is not None
+    assert next_task.scheduled_date == date(2027, 1, 5)
+    assert next_task.description == task.description
+    assert next_task.scheduled_time == task.scheduled_time
+    assert next_task.frequency == task.frequency
+    assert next_task.category == task.category
+    assert next_task.recurrence_id == task.recurrence_id
+    assert next_task.is_completed is False
+
+
 def test_completing_as_needed_task_does_not_add_an_occurrence() -> None:
     today = date(2026, 10, 18)
     task = Task("Play", time(10, 0), "as needed")
@@ -99,6 +150,30 @@ def test_completing_as_needed_task_does_not_add_an_occurrence() -> None:
     scheduler.mark_completed(task, completed_on=today)
 
     assert len(pet.tasks) == 1
+
+
+def test_completing_recurring_task_does_not_duplicate_existing_occurrence() -> None:
+    today = date(2026, 10, 18)
+    task = Task(
+        "Breakfast", time(7, 30), "daily", scheduled_date=today
+    )
+    existing_next = task.next_occurrence(today)
+    assert existing_next is not None
+    pet = PetInfo(
+        name="Mochi",
+        animal="dog",
+        breed="Shiba Inu",
+        age=4,
+        tasks=[task, existing_next],
+    )
+    owner = OwnerInfo(name="Jordan", contact="jordan@example.com", pets=[pet])
+    scheduler = Scheduler()
+    scheduler.organize_tasks(owner, for_date=today)
+
+    scheduler.mark_completed(task, completed_on=today)
+
+    assert task.is_completed is True
+    assert pet.tasks == [task, existing_next]
 
 
 def test_scheduler_warns_about_same_pet_tasks_at_same_time() -> None:
@@ -171,3 +246,28 @@ def test_scheduler_ignores_unscheduled_tasks_and_other_dates() -> None:
     owner = OwnerInfo(name="Jordan", contact="jordan@example.com", pets=[pet])
 
     assert Scheduler().detect_conflicts(owner, for_date=today) == []
+
+
+def test_scheduler_reports_each_pair_for_three_tasks_at_same_time() -> None:
+    today = date(2026, 10, 18)
+    pet = PetInfo(
+        name="Mochi",
+        animal="dog",
+        breed="Shiba Inu",
+        age=4,
+        tasks=[
+            Task("Breakfast", time(8, 0), "daily", scheduled_date=today),
+            Task("Medicine", time(8, 0), "daily", scheduled_date=today),
+            Task("Walk", time(8, 0), "daily", scheduled_date=today),
+            Task("Later walk", time(8, 30), "daily", scheduled_date=today),
+            Task("Unscheduled play", None, "as needed", scheduled_date=today),
+        ],
+    )
+    owner = OwnerInfo(name="Jordan", contact="jordan@example.com", pets=[pet])
+
+    warnings = Scheduler().detect_conflicts(owner, for_date=today)
+
+    assert len(warnings) == 3
+    assert all("8:00 AM" in warning for warning in warnings)
+    assert all("Later walk" not in warning for warning in warnings)
+    assert all("Unscheduled play" not in warning for warning in warnings)

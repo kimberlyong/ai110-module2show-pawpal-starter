@@ -69,6 +69,33 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 
 ## 🧪 Testing PawPal+
 
+### Focused edge-case test plan
+
+Use fixed dates and times in unit tests so results do not depend on when the
+tests run. The highest-priority cases cover schedule ordering and recurring
+task creation.
+
+| Priority | Area | Scenario | Expected result |
+|----------|------|----------|-----------------|
+| P0 | Sorting | Tasks are entered out of chronological order, including morning and afternoon times. | The selected day's tasks are returned from earliest to latest. |
+| P0 | Sorting | Medication, meal, walk, and other tasks share one scheduled time. | Medication and meal tasks appear before walk/other tasks; their relative order follows their original task-list order. |
+| P0 | Sorting | A timed task and one or more tasks without a scheduled time are mixed together. | Timed tasks appear first in time order; unscheduled tasks appear last. |
+| P0 | Sorting | Tasks belong to multiple pets and include dates before, on, and after the requested date. | Only tasks dated for the requested day appear, sorted together across pets. |
+| P0 | Recurrence | A daily task is completed with a fixed completion date. | The original is marked complete and exactly one new, incomplete occurrence is added to the same pet for the next day. |
+| P0 | Recurrence | A weekly task is completed near a month or year boundary. | Exactly one incomplete occurrence is added to the same pet seven calendar days later, including the correct month/year rollover. |
+| P0 | Recurrence | The same already-completed task is marked complete more than once. | No additional occurrence is created after the first completion. |
+| P1 | Sorting | Several tasks share a time and category priority, or are all unscheduled. | Tasks with equivalent sort keys retain their original order. |
+| P1 | Sorting | The selected day has no tasks, or the owner has no pets/tasks. | An empty schedule is returned without an error. |
+| P1 | Recurrence | A task with an unsupported recurrence frequency (for example, "as needed") is completed. | The task is marked complete, but no new occurrence is created. |
+| P1 | Recurrence | A recurring task's next date already exists for the same recurrence identifier. | Completion does not add a duplicate occurrence for that date. |
+| P1 | Recurrence | A task not in the current schedule is passed to `mark_completed`. | A `ValueError` is raised and no task state or pet task list is changed. |
+| P1 | Recurrence | A recurring occurrence is created. | Description, time, frequency, category, and recurrence identifier are preserved; the new task has the calculated date and starts incomplete. |
+
+For each case, assert the full task identity/order or exact occurrence count,
+date, completion status, and pet assignment as appropriate. Use a
+`completed_on` date explicitly for recurrence tests; do not rely on the system
+date. Run the focused tests first, then the full suite with `pytest`.
+
 ```bash
 # Run the full test suite:
 pytest
@@ -82,6 +109,15 @@ Sample test output:
 ```
 # Paste your pytest output here
 ```
+platform win32 -- Python 3.15.0, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\kimbe\Downloads\ai110-module2show-pawpal-starter-main\ai110-module2show-pawpal-starter-main
+plugins: anyio-4.15.1
+collected 14 items
+
+tests\test_pawpal.py ..............                                                                                        [100%]
+
+====================================================== 14 passed in 0.04s =======================================================
+
 
 ## 📐 Smarter Scheduling
 
