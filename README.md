@@ -12,6 +12,10 @@ A busy pet owner needs help staying consistent with pet care. They want an assis
 
 Your job is to design the system first (UML), then implement the logic in Python, then connect it to the Streamlit UI.
 
+## Implementation summary
+
+The core classes are in `pawpal_system.py`. `Task` stores an activity's description, scheduled time, frequency, and completion status. `PetInfo` stores a pet's details and tasks. `OwnerInfo` manages multiple pets and `get_all_tasks()` combines their tasks. `Scheduler` retrieves tasks through the owner, orders them by scheduled time (unscheduled tasks go last), and can mark a task in its schedule as complete. `main.py` demonstrates a daily schedule for three pets, and `tests/test_pawpal.py` checks task completion and task addition.
+
 ## What you will build
 
 Your final app should:
@@ -45,6 +49,15 @@ pip install -r requirements.txt
 ## 🖥️ Sample Output
 
 Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
+
+------------------------------------------------------------------------------------
+# 7:00 AM - Luna: Breakfast (daily)
+# 7:30 AM - Mochi: Breakfast (daily)
+# 8:00 AM - Mochi: Morning walk (daily)
+# 9:00 AM - Luna: Give medication (daily)
+# 3:00 PM - Max: Afternoon walk (daily)
+# 6:00 PM - Max: Dinner (daily)
+------------------------------------------------------------------------------------
 
 ```
 # e.g.:

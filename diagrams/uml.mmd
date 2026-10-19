@@ -2,27 +2,35 @@ classDiagram
     class OwnerInfo {
         +name: String
         +contact: String
-        +workSchedule: String
-        +restrictions: String
+        +availableTimes: List~String~
+        +getAllTasks(): List~Task~
     }
 
     class PetInfo {
+        +name: String
         +animal: String
         +breed: String
         +age: Integer
         +specialRequirements: String
         +feedingRequirements: String
+        +tasks: List~Task~
     }
 
     class Task {
-        +type: String
+        +description: String
+        +scheduledTime: Time?
         +frequency: String
+        +isCompleted: Boolean
     }
 
-    class DailyPlan {
-        +organizeTasks()
+    class Scheduler {
+        +tasks: List~Task~
+        +retrieveTasks(owner: OwnerInfo): List~Task~
+        +organizeTasks(owner: OwnerInfo): List~Task~
+        +markCompleted(task: Task)
     }
 
     OwnerInfo "1" --> "0..*" PetInfo : manages
     PetInfo "1" --> "0..*" Task : determines
-    Task "1..*" --> "1" DailyPlan : builds
+    OwnerInfo "1" --> "1" Scheduler : provides tasks from all pets
+    Task "0..*" --> "1" Scheduler : organizes and tracks
