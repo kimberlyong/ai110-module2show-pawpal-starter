@@ -1,5 +1,7 @@
 from datetime import date, time, timedelta
 
+import pytest
+
 from pawpal_system import OwnerInfo, PetInfo, Scheduler, Task
 
 
@@ -34,6 +36,36 @@ def test_scheduler_prioritizes_medication_and_meals_at_the_same_time() -> None:
     schedule = Scheduler().organize_tasks(owner)
 
     assert schedule == [medication, meal, walk, later_meal]
+
+
+def test_tasks_infer_priorities_from_category_and_other_descriptions() -> None:
+    assert Task("Give medicine", time(8, 0), "daily").priority == "high"
+    assert (
+        Task("Quiet enrichment", time(8, 0), "weekly").priority == "low"
+    )
+    assert Task("Brush coat", time(8, 0), "weekly").priority == "medium"
+    assert (
+        Task("Anything", time(8, 0), "daily", category="meal").priority
+        == "high"
+    )
+
+
+def test_scheduler_uses_priority_to_sort_tasks_at_the_same_time() -> None:
+    pet = PetInfo(name="Mochi", animal="dog", breed="Shiba Inu", age=4)
+    low = Task("Optional enrichment", time(8, 0), "as needed")
+    medium = Task("Brush coat", time(8, 0), "weekly")
+    high = Task("Urgent medication", time(8, 0), "daily")
+    pet.tasks.extend([low, medium, high])
+    owner = OwnerInfo(name="Jordan", contact="jordan@example.com", pets=[pet])
+
+    schedule = Scheduler().organize_tasks(owner)
+
+    assert schedule == [high, medium, low]
+
+
+def test_task_rejects_priority_outside_supported_levels() -> None:
+    with pytest.raises(ValueError, match="Priority must be one of"):
+        Task("Walk", time(8, 0), "daily", priority="critical")
 
 
 def test_scheduler_places_unscheduled_tasks_last() -> None:
@@ -168,6 +200,7 @@ def test_weekly_recurrence_copies_task_details_across_year_boundary() -> None:
     assert next_task.frequency == task.frequency
     assert next_task.category == task.category
     assert next_task.recurrence_id == task.recurrence_id
+    assert next_task.priority == task.priority
     assert next_task.is_completed is False
 
 

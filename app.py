@@ -104,7 +104,10 @@ else:
                 owner.pets[selected_pet_index].tasks.append(task)
                 st.session_state.schedule = []
                 st.session_state.schedule_generated = False
-                st.success(f"Added task for {owner.pets[selected_pet_index].name}.")
+                st.success(
+                    f"Added task for {owner.pets[selected_pet_index].name}. "
+                    f"Assigned {task.priority} priority."
+                )
 
         for pet in owner.pets:
             with st.expander(f"{pet.name} ({pet.animal})"):
@@ -120,7 +123,8 @@ else:
                             f"{task.scheduled_date.strftime('%b %d')} "
                             f"{task_time} — {task.description} "
                             f"[{task.category.title()}] "
-                            f"({task.frequency}; {status})"
+                            f"({task.frequency}; {task.priority.title()} priority; "
+                            f"{status})"
                         )
                 else:
                     st.write("No tasks added yet.")
@@ -187,6 +191,7 @@ else:
                         "Pet": pet_names_by_task[id(task)],
                         "Care task": task.description,
                         "Category": task.category.title(),
+                        "Priority": task.priority.title(),
                         "Frequency": task.frequency.title(),
                         "Status": "Complete" if task.is_completed else "Not complete",
                     }

@@ -7,6 +7,8 @@ classDiagram
         +str category
         +date scheduled_date
         +str recurrence_id
+        +str priority
+        +__post_init__() None
         +mark_complete() None
         +next_occurrence(completed_on: date?) Task?
     }

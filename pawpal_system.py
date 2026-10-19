@@ -5,6 +5,46 @@ from datetime import date, time, timedelta
 from uuid import uuid4
 
 
+PRIORITY_RANK = {"high": 0, "medium": 1, "low": 2}
+
+
+def infer_priority(description: str, category: str) -> str:
+    """Assign a care priority from the task category and its description."""
+    normalized_category = category.strip().lower()
+    normalized_description = description.strip().lower()
+
+    if normalized_category in {"medication", "meal"}:
+        return "high"
+
+    high_priority_terms = (
+        "emergency",
+        "urgent",
+        "medication",
+        "medicine",
+        "meds",
+        "insulin",
+        "pill",
+        "dose",
+        "prescribed",
+        "feeding",
+        "feed",
+        "breakfast",
+        "lunch",
+        "dinner",
+        "food",
+    )
+    if any(term in normalized_description for term in high_priority_terms):
+        return "high"
+
+    low_priority_terms = ("enrichment", "optional", "play", "toy")
+    if any(
+        term in normalized_description for term in low_priority_terms
+    ):
+        return "low"
+
+    return "medium"
+
+
 @dataclass
 class Task:
     description: str
@@ -14,6 +54,18 @@ class Task:
     category: str = "other"
     scheduled_date: date = field(default_factory=date.today)
     recurrence_id: str = field(default_factory=lambda: uuid4().hex, repr=False)
+    priority: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.priority.strip():
+            self.priority = infer_priority(self.description, self.category)
+        else:
+            self.priority = self.priority.strip().lower()
+            if self.priority not in PRIORITY_RANK:
+                valid_priorities = ", ".join(PRIORITY_RANK)
+                raise ValueError(
+                    f"Priority must be one of: {valid_priorities}."
+                )
 
     def mark_complete(self) -> None:
         """Mark this task as completed."""
@@ -26,7 +78,7 @@ class Task:
         recur seven days after it. If no completion date is supplied, today's
         date is used. The returned task copies the description, time,
         frequency, and category, starts incomplete, and retains the recurrence
-        identifier used to prevent duplicate instances.
+        identifier used to prevent duplicate instances. Priority is preserved.
 
         Args:
             completed_on: Date the task was completed; defaults to today.
@@ -48,6 +100,7 @@ class Task:
             category=self.category,
             scheduled_date=occurrence_date,
             recurrence_id=self.recurrence_id,
+            priority=self.priority,
         )
 
 
@@ -90,8 +143,9 @@ class Scheduler:
     ) -> list[Task]:
         """Return the selected day's tasks in display order.
 
-        Tasks are sorted chronologically, with medication and meal tasks ahead
-        of other categories when scheduled at the same time. Tasks without a
+        Tasks are sorted chronologically, with higher-priority tasks first
+        when scheduled at the same time. Medication and meal tasks also come
+        before other categories when time and priority match. Tasks without a
         scheduled time appear last. The selected tasks are also stored on this
         scheduler for subsequent completion operations.
 
@@ -113,6 +167,7 @@ class Scheduler:
             key=lambda task: (
                 task.scheduled_time is None,
                 task.scheduled_time or time.max,
+                PRIORITY_RANK[task.priority],
                 category_priority.get(task.category.lower(), 1),
             ),
         )

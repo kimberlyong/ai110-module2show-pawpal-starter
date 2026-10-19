@@ -14,7 +14,7 @@ Your job is to design the system first (UML), then implement the logic in Python
 
 ## Implementation summary
 
-The core classes are in `pawpal_system.py`. `Task` stores an activity's description, scheduled time, frequency, category, completion status, and scheduled date. `PetInfo` stores a pet's details and tasks. `OwnerInfo` manages multiple pets and `get_all_tasks()` combines their tasks. `Scheduler` retrieves tasks through the owner, orders the selected day's tasks by scheduled time (unscheduled tasks go last), prioritizes medication and meals when tasks share a time, detects same-time task conflicts as warning messages, and can mark a task in its schedule as complete. Completing a daily or weekly task creates the next dated occurrence for that pet; other task frequencies do not recur automatically. The Streamlit app supports filtering a generated schedule by pet and completion status and displays conflict warnings. `main.py` demonstrates a daily schedule for three pets, including a same-time conflict warning; `tests/test_pawpal.py` checks task completion, task addition, schedule ordering, recurring occurrences, and conflict detection.
+The core classes are in `pawpal_system.py`. Each `Task` gets a high, medium, or low priority from its category and description. Medication and meals are high priority. Words such as "urgent" or "medicine" also make an "Other" task high priority. Enrichment and play are low priority. Other tasks default to medium. The scheduler sorts by time, then priority. Medication and meals come first when time and priority match. Tasks without a time appear last. The app shows priorities, supports filters, and warns about same-time conflicts. Completing daily or weekly tasks creates the next occurrence.
 
 ## What you will build
 
@@ -48,24 +48,8 @@ pip install -r requirements.txt
 
 ## 🖥️ Sample Output
 
-Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
-
-------------------------------------------------------------------------------------
-# 7:00 AM - Luna: Breakfast (daily)
-# 7:30 AM - Mochi: Breakfast (daily)
-# 8:00 AM - Mochi: Morning walk (daily)
-# 9:00 AM - Luna: Give medication (daily)
-# 3:00 PM - Max: Afternoon walk (daily)
-# 6:00 PM - Max: Dinner (daily)
-------------------------------------------------------------------------------------
-
-```
-# e.g.:
-# Daily plan for Biscuit (Golden Retriever):
-#   08:00 — Morning walk (30 min) [priority: high]
-#   09:00 — Feeding (10 min) [priority: high]
-#   ...
-```
+The sample run in the demo below shows assigned priorities and how a high-priority
+medication task moves before a medium-priority walk at the same time.
 
 ## 🧪 Testing PawPal+
 
@@ -78,7 +62,9 @@ task creation.
 | Priority | Area | Scenario | Expected result |
 |----------|------|----------|-----------------|
 | P0 | Sorting | Tasks are entered out of chronological order, including morning and afternoon times. | The selected day's tasks are returned from earliest to latest. |
-| P0 | Sorting | Medication, meal, walk, and other tasks share one scheduled time. | Medication and meal tasks appear before walk/other tasks; their relative order follows their original task-list order. |
+| P0 | Priority | A task has no priority set. | Its type and description assign high, medium, or low; an unrecognized description defaults to medium. |
+| P0 | Sorting | High, medium, and low priority tasks share one time. | Tasks appear high first, then medium, then low. |
+| P0 | Sorting | Medication, meal, walk, and other tasks share one time and priority. | Medication and meals appear first; tasks with equal sort keys keep their original order. |
 | P0 | Sorting | A timed task and one or more tasks without a scheduled time are mixed together. | Timed tasks appear first in time order; unscheduled tasks appear last. |
 | P0 | Sorting | Tasks belong to multiple pets and include dates before, on, and after the requested date. | Only tasks dated for the requested day appear, sorted together across pets. |
 | P0 | Recurrence | A daily task is completed with a fixed completion date. | The original is marked complete and exactly one new, incomplete occurrence is added to the same pet for the next day. |
@@ -107,9 +93,9 @@ pytest --cov
 Sample test output:
 
 ```
-collected 15 items
-tests/test_pawpal.py ............... [100%]
-15 passed
+collected 18 items
+tests/test_pawpal.py .................. [100%]
+18 passed
 ```
 
 
@@ -117,7 +103,8 @@ tests/test_pawpal.py ............... [100%]
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Sorted schedule | `Scheduler.organize_tasks()` | Shows today's tasks in time order. Meals and medicine come first when times match. Tasks without a time come last. |
+| Task priority | `Task.priority`; `infer_priority()` | Assigns high, medium, or low from task type and description. |
+| Sorted schedule | `Scheduler.organize_tasks()` | Sorts by time, then priority. Meals and medicine break ties. Untimed tasks come last. |
 | Filters | `Scheduler.filter_tasks()` | Filter tasks by pet and completion status. |
 | Conflict warnings | `Scheduler.detect_conflicts()` | Warns when tasks share a time. |
 | Recurring tasks | `Task.next_occurrence()`; `Scheduler.mark_completed()` | Daily tasks repeat tomorrow. Weekly tasks repeat in seven days. Other tasks do not repeat. |
@@ -126,9 +113,9 @@ tests/test_pawpal.py ............... [100%]
 
 1. Enter your name and contact details, then save the owner information.
 2. Select **Add a pet**. Enter the pet's name, animal, breed, and age.
-3. Use the task form to choose a pet, enter a task, and set its time, type, and frequency. For example, add Mochi's 7:30 AM breakfast and 8:00 AM walk.
-4. Select **Generate schedule**. PawPal+ combines the pets' tasks and sorts them by time. Medication and meals come before other tasks when times match. Tasks without a time appear last.
-5. Review the schedule table, which shows each task's time, pet, category, frequency, and completion status. Summary counts show how many tasks are complete and remaining.
+3. Use the task form to choose a pet, enter a task, and set its time, type, and frequency. PawPal+ assigns a priority from its type and description. "Urgent medication refill" is high, even if its type is **Other**. "Quiet enrichment" is low. An unmatched description is medium.
+4. Select **Generate schedule**. PawPal+ sorts tasks by time. Tasks at the same time go high, medium, then low. Medication and meals come first when priority also matches. Untimed tasks come last.
+5. Review the schedule table. It shows each task's time, pet, category, priority, frequency, and completion status. Summary counts show complete and remaining tasks.
 6. Check the conflict warnings. PawPal+ warns when two or more tasks share a time, including tasks for different pets. Warnings do not hide the schedule.
 7. Use the filters to show one pet or only complete or incomplete tasks. Expand **Update task completion** to mark a task done. Completing a daily or weekly task adds its next occurrence to that pet.
 
@@ -137,12 +124,12 @@ Running `main.py` prints a sample schedule for three pets:
 ```text
 Today's schedule
 WARNING: Schedule conflict at 8:00 AM: Mochi — Morning walk and Luna — Give medication are scheduled at the same time.
-7:00 AM - Luna: Breakfast (daily)
-7:30 AM - Mochi: Breakfast (daily)
-8:00 AM - Mochi: Morning walk (daily)
-8:00 AM - Luna: Give medication (daily)
-3:00 PM - Max: Afternoon walk (daily)
-6:00 PM - Max: Dinner (daily)
+7:00 AM - Luna: Breakfast (daily; high priority)
+7:30 AM - Mochi: Breakfast (daily; high priority)
+8:00 AM - Luna: Give medication (daily; high priority)
+8:00 AM - Mochi: Morning walk (daily; medium priority)
+3:00 PM - Max: Afternoon walk (daily; medium priority)
+6:00 PM - Max: Dinner (daily; high priority)
 ```
 
 **Screenshot or video** *(optional)*: Add a screenshot or demo link here.

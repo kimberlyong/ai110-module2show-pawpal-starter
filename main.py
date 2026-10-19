@@ -51,7 +51,10 @@ def main() -> None:
             else "No time set"
         )
         pet_name = pet_names_by_task[id(task)]
-        print(f"{time_label} - {pet_name}: {task.description} ({task.frequency})")
+        print(
+            f"{time_label} - {pet_name}: {task.description} "
+            f"({task.frequency}; {task.priority} priority)"
+        )
 
 
 if __name__ == "__main__":
