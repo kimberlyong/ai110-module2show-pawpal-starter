@@ -1,0 +1,46 @@
+classDiagram
+    class Task {
+        +str description
+        +time? scheduled_time
+        +str frequency
+        +bool is_completed
+        +str category
+        +date scheduled_date
+        +str recurrence_id
+        +mark_complete() None
+        +next_occurrence(completed_on: date?) Task?
+    }
+
+    class PetInfo {
+        +str name
+        +str animal
+        +str breed
+        +int age
+        +str special_requirements
+        +str feeding_requirements
+        +list~Task~ tasks
+    }
+
+    class OwnerInfo {
+        +str name
+        +str contact
+        +list~str~ available_times
+        +list~PetInfo~ pets
+        +get_all_tasks() list~Task~
+    }
+
+    class Scheduler {
+        +list~Task~ tasks
+        +OwnerInfo? owner
+        +retrieve_tasks(owner: OwnerInfo) list~Task~
+        +organize_tasks(owner: OwnerInfo, for_date: date?) list~Task~
+        +filter_tasks(tasks: list~Task~, owner: OwnerInfo, pet: PetInfo?, is_completed: bool?) list~Task~
+        +detect_conflicts(owner: OwnerInfo, for_date: date?) list~str~
+        +mark_completed(task: Task, completed_on: date?) None
+    }
+
+    OwnerInfo "1" *-- "0..*" PetInfo : owns
+    PetInfo "1" *-- "0..*" Task : schedules
+    Scheduler "1" --> "0..1" OwnerInfo : works with
+    Scheduler "1" --> "0..*" Task : organizes and tracks
+    Task ..> Task : creates next occurrence

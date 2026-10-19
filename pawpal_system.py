@@ -118,6 +118,31 @@ class Scheduler:
         )
         return list(self.tasks)
 
+    def filter_tasks(
+        self,
+        tasks: list[Task],
+        owner: OwnerInfo,
+        pet: PetInfo | None = None,
+        is_completed: bool | None = None,
+    ) -> list[Task]:
+        """Filter schedule tasks by pet and completion status."""
+        filtered_tasks = []
+        for task in tasks:
+            if is_completed is not None and task.is_completed != is_completed:
+                continue
+            if pet is not None and not any(
+                pet_task is task for pet_task in pet.tasks
+            ):
+                continue
+            if not any(
+                pet_task is task
+                for owner_pet in owner.pets
+                for pet_task in owner_pet.tasks
+            ):
+                continue
+            filtered_tasks.append(task)
+        return filtered_tasks
+
     def detect_conflicts(
         self, owner: OwnerInfo, for_date: date | None = None
     ) -> list[str]:

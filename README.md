@@ -107,35 +107,42 @@ pytest --cov
 Sample test output:
 
 ```
-# Paste your pytest output here
+collected 15 items
+tests/test_pawpal.py ............... [100%]
+15 passed
 ```
-platform win32 -- Python 3.15.0, pytest-9.1.1, pluggy-1.7.0
-rootdir: C:\Users\kimbe\Downloads\ai110-module2show-pawpal-starter-main\ai110-module2show-pawpal-starter-main
-plugins: anyio-4.15.1
-collected 14 items
-
-tests\test_pawpal.py ..............                                                                                        [100%]
-
-====================================================== 14 passed in 0.04s =======================================================
 
 
-## 📐 Smarter Scheduling
+## 📐 Features
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | `Scheduler.organize_tasks()` | Includes tasks scheduled for the selected date, ordered chronologically. Medication and meal tasks come before walks and other categories when their scheduled times match. Tasks without a time appear last. |
-| Filtering | Streamlit schedule filters in `app.py` | Users can filter the generated schedule by pet and completion status (all, complete, or not complete). The scheduler itself selects tasks by date; it does not currently filter by available time or skip tasks. |
-| Conflict handling | `Scheduler.detect_conflicts()` | Checks tasks for the selected date and returns warning messages for each pair with the same scheduled time, whether they belong to one pet or multiple pets. Unscheduled tasks are ignored. Warnings are displayed without stopping schedule generation. |
-| Recurring tasks | `Task.next_occurrence()`; `Scheduler.mark_completed()` | Completing a daily task creates an incomplete task for the following day; completing a weekly task creates one seven days later. The next occurrence retains the task details and recurrence identifier and is added to the same pet. Other frequencies do not recur automatically. |
+| Sorted schedule | `Scheduler.organize_tasks()` | Shows today's tasks in time order. Meals and medicine come first when times match. Tasks without a time come last. |
+| Filters | `Scheduler.filter_tasks()` | Filter tasks by pet and completion status. |
+| Conflict warnings | `Scheduler.detect_conflicts()` | Warns when tasks share a time. |
+| Recurring tasks | `Task.next_occurrence()`; `Scheduler.mark_completed()` | Daily tasks repeat tomorrow. Weekly tasks repeat in seven days. Other tasks do not repeat. |
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+1. Enter your name and contact details, then save the owner information.
+2. Select **Add a pet**. Enter the pet's name, animal, breed, and age.
+3. Use the task form to choose a pet, enter a task, and set its time, type, and frequency. For example, add Mochi's 7:30 AM breakfast and 8:00 AM walk.
+4. Select **Generate schedule**. PawPal+ combines the pets' tasks and sorts them by time. Medication and meals come before other tasks when times match. Tasks without a time appear last.
+5. Review the schedule table, which shows each task's time, pet, category, frequency, and completion status. Summary counts show how many tasks are complete and remaining.
+6. Check the conflict warnings. PawPal+ warns when two or more tasks share a time, including tasks for different pets. Warnings do not hide the schedule.
+7. Use the filters to show one pet or only complete or incomplete tasks. Expand **Update task completion** to mark a task done. Completing a daily or weekly task adds its next occurrence to that pet.
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+Running `main.py` prints a sample schedule for three pets:
 
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+```text
+Today's schedule
+WARNING: Schedule conflict at 8:00 AM: Mochi — Morning walk and Luna — Give medication are scheduled at the same time.
+7:00 AM - Luna: Breakfast (daily)
+7:30 AM - Mochi: Breakfast (daily)
+8:00 AM - Mochi: Morning walk (daily)
+8:00 AM - Luna: Give medication (daily)
+3:00 PM - Max: Afternoon walk (daily)
+6:00 PM - Max: Dinner (daily)
+```
+
+**Screenshot or video** *(optional)*: Add a screenshot or demo link here.

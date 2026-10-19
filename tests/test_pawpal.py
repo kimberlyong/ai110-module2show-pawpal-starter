@@ -48,6 +48,39 @@ def test_scheduler_places_unscheduled_tasks_last() -> None:
     assert schedule == [timed_task, unscheduled_task]
 
 
+def test_scheduler_filters_tasks_by_pet_and_completion_status() -> None:
+    mochi_task = Task("Breakfast", time(7, 0), "daily")
+    completed_luna_task = Task(
+        "Medicine", time(8, 0), "daily", is_completed=True
+    )
+    mochi = PetInfo(
+        name="Mochi",
+        animal="dog",
+        breed="Shiba Inu",
+        age=4,
+        tasks=[mochi_task],
+    )
+    luna = PetInfo(
+        name="Luna",
+        animal="cat",
+        breed="Tabby",
+        age=6,
+        tasks=[completed_luna_task],
+    )
+    owner = OwnerInfo(
+        name="Jordan", contact="jordan@example.com", pets=[mochi, luna]
+    )
+
+    visible_tasks = Scheduler().filter_tasks(
+        [mochi_task, completed_luna_task],
+        owner,
+        pet=mochi,
+        is_completed=False,
+    )
+
+    assert visible_tasks == [mochi_task]
+
+
 def test_scheduler_sorts_across_pets_and_excludes_other_dates() -> None:
     selected_date = date(2026, 10, 18)
     earlier = Task(

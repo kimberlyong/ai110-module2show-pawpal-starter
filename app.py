@@ -13,7 +13,7 @@ def update_task_completion(task: Task, state_key: str) -> None:
         task.is_completed = False
 
 
-st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
+st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="wide")
 st.title("🐾 PawPal+")
 st.write("Add pets and their care tasks to build a combined daily schedule.")
 
@@ -23,6 +23,8 @@ if "scheduler" not in st.session_state:
     st.session_state.scheduler = Scheduler()
 if "schedule" not in st.session_state:
     st.session_state.schedule = []
+if "schedule_generated" not in st.session_state:
+    st.session_state.schedule_generated = False
 
 owner = st.session_state.owner
 
@@ -66,6 +68,7 @@ else:
                     )
                 )
                 st.session_state.schedule = []
+                st.session_state.schedule_generated = False
                 st.success(f"Added {pet_name.strip()}.")
 
     st.subheader("Pets and care tasks")
@@ -100,6 +103,7 @@ else:
                 )
                 owner.pets[selected_pet_index].tasks.append(task)
                 st.session_state.schedule = []
+                st.session_state.schedule_generated = False
                 st.success(f"Added task for {owner.pets[selected_pet_index].name}.")
 
         for pet in owner.pets:
@@ -124,59 +128,79 @@ else:
     st.subheader("Today's schedule")
     if st.button("Generate schedule", disabled=not owner.get_all_tasks()):
         st.session_state.schedule = st.session_state.scheduler.organize_tasks(owner)
+        st.session_state.schedule_generated = True
 
-    if st.session_state.schedule:
-        for warning in st.session_state.scheduler.detect_conflicts(owner):
-            st.warning(warning)
+    if st.session_state.schedule_generated:
+        scheduler = st.session_state.scheduler
+        conflicts = scheduler.detect_conflicts(owner)
+        if conflicts:
+            st.warning("Some tasks share the same scheduled time:")
+            for warning in conflicts:
+                st.warning(warning)
+        else:
+            st.success("No scheduling conflicts found.")
 
-        pet_indices_by_task = {
-            id(task): pet_index
-            for pet_index, pet in enumerate(owner.pets)
-            for task in pet.tasks
-        }
-        pet_options: list[int | None] = [None, *range(len(owner.pets))]
         selected_pet = st.selectbox(
             "Filter by pet",
-            pet_options,
-            format_func=lambda index: (
-                "All pets" if index is None else owner.pets[index].name
-            ),
+            [None, *owner.pets],
+            format_func=lambda pet: "All pets" if pet is None else pet.name,
         )
-        selected_status = st.selectbox(
+        status_filter = st.selectbox(
             "Filter by task status",
             ["All tasks", "Not complete", "Complete"],
         )
-        visible_tasks = [
-            task
-            for task in st.session_state.schedule
-            if (
-                selected_pet is None
-                or pet_indices_by_task[id(task)] == selected_pet
-            )
-            and (
-                selected_status == "All tasks"
-                or task.is_completed == (selected_status == "Complete")
-            )
-        ]
-        if not visible_tasks:
-            st.info("No tasks match these filters.")
+        selected_completion = {
+            "All tasks": None,
+            "Not complete": False,
+            "Complete": True,
+        }[status_filter]
+        visible_tasks = scheduler.filter_tasks(
+            st.session_state.schedule,
+            owner,
+            pet=selected_pet,
+            is_completed=selected_completion,
+        )
 
-        for task in visible_tasks:
-            pet_name = owner.pets[pet_indices_by_task[id(task)]].name
-            task_time = (
-                task.scheduled_time.strftime("%I:%M %p").lstrip("0")
-                if task.scheduled_time is not None
-                else "No time set"
+        if not st.session_state.schedule:
+            st.info("No tasks are scheduled for today.")
+        elif not visible_tasks:
+            st.info("No tasks match these filters.")
+        else:
+            completed_count = sum(task.is_completed for task in visible_tasks)
+            total_count = len(visible_tasks)
+            summary_columns = st.columns(3)
+            summary_columns[0].metric("Tasks shown", total_count)
+            summary_columns[1].metric("Complete", completed_count)
+            summary_columns[2].metric("Remaining", total_count - completed_count)
+
+            pet_names_by_task = {
+                id(task): pet.name for pet in owner.pets for task in pet.tasks
+            }
+            st.table(
+                [
+                    {
+                        "Time": (
+                            task.scheduled_time.strftime("%I:%M %p").lstrip("0")
+                            if task.scheduled_time is not None
+                            else "No time set"
+                        ),
+                        "Pet": pet_names_by_task[id(task)],
+                        "Care task": task.description,
+                        "Category": task.category.title(),
+                        "Frequency": task.frequency.title(),
+                        "Status": "Complete" if task.is_completed else "Not complete",
+                    }
+                    for task in visible_tasks
+                ]
             )
-            st.write(
-                f"{task_time} — {pet_name}: {task.description} "
-                f"({task.category.title()}; {task.frequency})"
-            )
-            completion_key = f"task_completed_{id(task)}"
-            st.checkbox(
-                "Complete",
-                value=task.is_completed,
-                key=completion_key,
-                on_change=update_task_completion,
-                args=(task, completion_key),
-            )
+
+            with st.expander("Update task completion"):
+                for task in visible_tasks:
+                    completion_key = f"task_completed_{id(task)}"
+                    st.checkbox(
+                        f"{pet_names_by_task[id(task)]}: {task.description}",
+                        value=task.is_completed,
+                        key=completion_key,
+                        on_change=update_task_completion,
+                        args=(task, completion_key),
+                    )
